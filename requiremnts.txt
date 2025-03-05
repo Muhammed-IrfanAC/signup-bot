@@ -1,0 +1,7 @@
+discord-py-interactions
+firebase-admin
+pandas
+requests
+python-dotenv
+openpyxl
+Flask
