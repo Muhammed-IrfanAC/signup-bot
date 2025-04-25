@@ -1,10 +1,18 @@
-version: "3.8"
-
 services:
-  clash_app:
-    build: .
-    ports:
-      - "8080:8080"
+  flask_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     env_file:
-      - .env
+      - /etc/signup-bot/.env
     restart: always
+
+  discord_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    env_file:
+      - /etc/signup-bot/.env
+    restart: always
+    depends_on:
+      - flask_api
