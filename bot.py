@@ -6,6 +6,7 @@ import io
 from dotenv import load_dotenv
 from collections import defaultdict
 from typing import List
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +30,8 @@ client = ClashClient()
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user}')
+
+    await asyncio.sleep(10)
 
     # Fetch all guilds the bot is in
     for guild in client.guilds:
