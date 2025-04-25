@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, karl]
+    runs-on: [self-hosted, Karl]
 
     steps:
       - name: Checkout code
