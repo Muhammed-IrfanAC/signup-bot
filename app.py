@@ -12,16 +12,21 @@ from openpyxl.utils import get_column_letter
 import requests
 from dotenv import load_dotenv
 from typing import List
+import base64
+import json
 
 # Load environment variables
 load_dotenv()
-AUTH = os.getenv('AUTH')
+AUTH = os.environ('AUTH')
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Initialize Firebase
-cred = credentials.Certificate("./signupbot-29441-firebase-adminsdk-gof0e-5c37269ee9.json")
+firebase_json_base64 = os.environ['FIREBASE_CRED']
+firebase_json = base64.b64decode(firebase_json_base64)
+firebase_dict = json.loads(firebase_json)
+cred = credentials.Certificate(firebase_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -512,10 +517,5 @@ def get_signups(event_name):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-# AWS Lambda handler
-def lambda_handler(event, context):
-    """AWS Lambda handler function"""
-    return app(event, context)
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port= 8080, debug=True)

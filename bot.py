@@ -9,8 +9,8 @@ from typing import List
 
 # Load environment variables
 load_dotenv()
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-API_BASE_URL = 'http://127.0.0.1:5000'
+DISCORD_TOKEN = os.environ('DISCORD_TOKEN')
+API_BASE_URL = 'http://127.0.0.1:8080'
 
 class ClashClient(discord.Client):
     def __init__(self):
