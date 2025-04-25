@@ -23,9 +23,17 @@ AUTH = os.environ('AUTH')
 app = Flask(__name__)
 
 # Initialize Firebase
-firebase_json_base64 = os.environ['FIREBASE_CRED']
-firebase_json = base64.b64decode(firebase_json_base64)
-firebase_dict = json.loads(firebase_json)
+firebase_json_base64 = os.environ('FIREBASE_CRED')
+
+if firebase_json_base64 is None:
+    raise ValueError("FIREBASE_CRED environment variable not found")
+
+try:
+    firebase_json_bytes = base64.b64decode(firebase_json_base64)
+    firebase_dict = json.loads(firebase_json_bytes.decode('utf-8'))
+except Exception as e:
+    raise ValueError("Failed to decode and parse Firebase credentials: " + str(e))
+
 cred = credentials.Certificate(firebase_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
