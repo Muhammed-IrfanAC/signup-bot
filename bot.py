@@ -11,7 +11,7 @@ import asyncio
 # Load environment variables
 load_dotenv()
 DISCORD_TOKEN = os.environ['DISCORD_TOKEN']
-API_BASE_URL = 'http://flask_api:8080'
+API_BASE_URL = os.environ['API_BASE_URL']
 
 class ClashClient(discord.Client):
     def __init__(self):
