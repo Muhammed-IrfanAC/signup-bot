@@ -17,13 +17,13 @@ import json
 
 # Load environment variables
 load_dotenv()
-AUTH = os.environ('AUTH')
+AUTH = os.environ['AUTH']
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Initialize Firebase
-firebase_json_base64 = os.environ('FIREBASE_CRED')
+firebase_json_base64 = os.environ['FIREBASE_CRED']
 
 if firebase_json_base64 is None:
     raise ValueError("FIREBASE_CRED environment variable not found")
