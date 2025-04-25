@@ -1,0 +1,18 @@
+name: Deploy to Karls Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, karl]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rebuild and restart Docker containers
+        run: |
+          docker compose up -d --build
