@@ -1,74 +1,20 @@
-version: '3.3'
+version: "3.9"
 
 services:
-  bot:
-    build: .
-    container_name: signup-bot
-    env_file: .env
-    restart: unless-stopped
+  flask_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - /etc/signup-bot/.env
+    restart: always
+
+  discord_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    env_file:
+      - /etc/signup-bot/.env
+    restart: always
     depends_on:
-      - api
-    environment:
-      - API_BASE_URL=http://api:8080
-      - ENVIRONMENT=prod
-    volumes:
-      - ./data:/app/data
-    networks:
-      - signup-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://api:8080/health', timeout=5)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  api:
-    build: .
-    container_name: signup-api
-    command: python run_api.py
-    ports:
-      - "8080:8080"
-    env_file: .env
-    restart: unless-stopped
-    environment:
-      - ENVIRONMENT=prod
-    volumes:
-      - ./data:/app/data
-    networks:
-      - signup-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health', timeout=5)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-networks:
-  signup-network:
-    driver: bridge
+      - flask_api
