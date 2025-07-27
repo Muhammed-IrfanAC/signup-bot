@@ -2,7 +2,7 @@
 
 A Discord bot designed to manage event signups for Clash of Clans communities. This bot allows clan leaders to create events and manage player registrations using their in-game tags.
 
-## Features
+## 🚀 Features
 
 ### Event Management
 - Create events with unique names
@@ -16,97 +16,151 @@ A Discord bot designed to manage event signups for Clash of Clans communities. T
 - Automatic player verification using CoC API
 - Check signup status
 - Remove signups (with leader permission)
-- Export event participant lists
+- Export event participant lists to Excel
 
 ### Admin Features
 - Leader role management
 - Event creation/deletion
 - Registration closure
-- Export participant lists to Excel
 - Real-time signup tracking
+- Data export functionality
 
-## Setup Instructions
+## 🏗️ Project Structure
+
+```
+signup-bot/
+├── signup_bot/               # Main package
+│   ├── __init__.py           # Package initialization and config
+│   ├── bot.py                # Main bot class and setup
+│   ├── api/                  # API implementation
+│   │   ├── __init__.py       # API app factory
+│   │   ├── routes/           # API route handlers
+│   │   │   ├── __init__.py
+│   │   │   ├── events.py     # Event-related routes
+│   │   │   └── admin.py      # Admin-related routes
+│   ├── cogs/                 # Discord cogs (command modules)
+│   │   ├── __init__.py
+│   │   ├── admin.py          # Admin commands
+│   │   ├── events.py         # Event management commands
+│   │   └── utilities.py      # Utility commands
+├── env.example               # Example environment variables
+├── requirements.txt          # Python dependencies
+├── run.py                    # Bot entry point
+└── run_api.py                # API server entry point
+```
+
+## 🛠️ Setup Instructions
 
 ### Prerequisites
-- Python 3.13 or higher
+- Python 3.10 or higher
 - Discord Bot Token
 - Clash of Clans API credentials
-- Firebase credentials
+- Firebase credentials (service account JSON)
 
 ### Installation
-1. Clone the repository:
+
+1. **Clone the repository**
+   ```bash
+   git clone [repository-url]
+   cd signup-bot
+   ```
+
+2. **Set up a virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   - Copy `env.example` to `.env`
+   - Fill in your credentials:
+     ```
+     DISCORD_TOKEN=your_discord_bot_token
+     FIREBASE_CRED=your_base64_encoded_firebase_credentials
+     AUTH=your_clash_of_clans_api_token
+     ```
+
+5. **Encode Firebase credentials**
+   ```bash
+   # Use the provided script to encode your Firebase JSON file
+   python encode_firebase.py path/to/your/firebase-credentials.json
+   ```
+   Copy the output and paste it as the `FIREBASE_CRED` value in your `.env` file.
+
+## 🚦 Running the Application
+
+The application consists of two main components:
+
+### 1. Discord Bot
 ```bash
-git clone [repository-url]
-cd signup-bot
+python run.py
 ```
 
-2. Install dependencies:
+### 2. API Server
 ```bash
-pip install -r requirements.txt
+python run_api.py
 ```
 
-3. Set up environment variables:
-Create a `.env` file with the following variables:
-```
-DISCORD_TOKEN=your_discord_bot_token
-FIREBASE_CRED=your_base64_encoded_firebase_credentials
-AUTH=your_auth_token
-```
+### Using Docker
 
-4. Run the bot:
-```bash
-python bot.py
-```
+1. **Build the images**
+   ```bash
+   docker-compose build
+   ```
 
-### Docker Deployment
-1. Build the Docker image:
-```bash
-docker build -t signup-bot .
-```
+2. **Run the services**
+   ```bash
+   docker-compose up -d
+   ```
 
-2. Run the container:
-```bash
-docker run -d --name signup-bot -e DISCORD_TOKEN=your_token -e FIREBASE_CRED=your_credentials signup-bot
-```
+## 🤖 Available Commands
 
-## Usage
+### Event Commands
+- `/create_event [name]` - Create a new event
+- `/list_events` - List all events
+- `/sign_up [event]` - Sign up for an event
+- `/check [event]` - Check your signup status
+- `/remove [event]` - Remove your signup
+- `/export [event]` - Export event data
 
-### Creating Events
-```bash
-/create_event [event_name]
-```
+### Admin Commands
+- `/add_leader_role [role]` - Add a role as a leader
+- `/remove_leader_role [role]` - Remove a leader role
+- `/list_leader_roles` - List all leader roles
 
-### Signing Up
-```bash
-/sign_up [event_name]
-```
+### Utility Commands
+- `/ping` - Check bot latency
+- `/uptime` - Check bot uptime
+- `/version` - Show bot version
+- `/invite` - Get bot invite link
 
-### Checking Signups
-```bash
-/check [event_name]
-```
+## 🔧 Development
 
-### Removing Signups
-```bash
-/remove [event_name]
-```
+1. **Code Style**
+   - Follow PEP 8 guidelines
+   - Use type hints for better code clarity
+   - Document public methods and classes
 
-### Exporting Signups
-```bash
-/export [event_name]
-```
+2. **Testing**
+   - Write tests for new features
+   - Run tests with `pytest`
 
-## Contributing
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+3. **Pull Requests**
+   - Fork the repository
+   - Create a feature branch
+   - Submit a pull request with a clear description
 
-## Support
-For support, please open an issue in the GitHub repository.
+## 📝 License
 
-## Acknowledgments
-- Discord.py for the Discord bot framework
-- Firebase for data storage
-- Clash of Clans API for player verification
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Discord.py](https://discordpy.readthedocs.io/) - Python library for Discord
+- [Firebase](https://firebase.google.com/) - Backend services
+- [Clash of Clans API](https://developer.clashofclans.com/) - Player verification
