@@ -1,17 +1,37 @@
-# Dockerfile.api
-FROM python:3.13-slim
+# syntax=docker/dockerfile:1
 
+FROM python:3.11-slim
+
+# Set working directory
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Install system dependencies required for some Python wheels
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies first to leverage Docker cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy application source code
+COPY signup_bot /app/signup_bot
+COPY run_api.py /app/
+COPY encode_firebase.py /app/
 
-# Production WSGI server for Flask
-RUN pip install gunicorn
+# Create an unprivileged user and switch to it
+RUN adduser --disabled-password --gecos "" appuser && \
+    chown -R appuser /app
+USER appuser
 
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "-w", "2", "app:app"]
+# Environment settings
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Expose the API port
+EXPOSE 8000
+
+# Launch the Flask API using Gunicorn with the app factory pattern.
+# This ignores the run_api.py file, leaving it unchanged for local development.
+CMD ["gunicorn", "signup_bot.api:create_app()", "--factory", "--bind", "0.0.0.0:8000", "--workers", "2"] 

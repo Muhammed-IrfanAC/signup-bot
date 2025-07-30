@@ -1,4 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+
+# Environment variables
 .env
-./signupbot-29441-firebase-adminsdk-gof0e-5c37269ee9.json
-myenv/
-.venv/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local development
+*.sqlite3
+
+# Project specific
+data/
+bot.log
+signupbot-29481-firebase-adminsdk-gof0e-5c37269ee9.json
+discord-bot-dev-e0574-firebase-adminsdk-fbsvc-c0e73faa39.json
+
+# Firebase credentials (general pattern)
+*-firebase-adminsdk-*.json
+
+# Assets - exclude large files but allow small assets
+assets/*.mp4
+assets/*.mov
+assets/*.avi
+assets/*.webm
+assets/*.mkv
+assets/*.zip
+assets/*.rar
+assets/*.7z
+assets/*.tar
+assets/*.gz
+# Allow small assets (GIF, PNG, JPG under 1MB)
+!assets/*.gif
+!assets/*.png
+!assets/*.jpg
+!assets/*.jpeg
+!assets/*.webp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
