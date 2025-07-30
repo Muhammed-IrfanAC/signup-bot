@@ -5,6 +5,7 @@ from discord.ext import commands
 import aiohttp
 import logging
 from typing import Optional
+from datetime import datetime
 
 from .. import Config
 
@@ -65,7 +66,8 @@ class Admin(commands.Cog):
                     embed = discord.Embed(
                         title="Leader Roles",
                         description="\n".join(roles) or "No leader roles set up yet.",
-                        color=discord.Color.blue()
+                        color=discord.Color.blue(),
+                        timestamp=datetime.utcnow()
                     )
                     await ctx.send(embed=embed, ephemeral=True)
                 else:

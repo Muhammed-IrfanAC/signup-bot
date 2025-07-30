@@ -1,8 +1,7 @@
 # Event management commands for the Signup Bot.
 import io
 import logging
-from socket import timeout
-from typing import List
+from datetime import datetime
 
 import aiohttp
 import discord
@@ -97,18 +96,21 @@ class ExportButton(Button):
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"{Config.API_BASE_URL}/api/events/{self.event_name}/export",
-                params={"guild_id": interaction.guild_id}
+                params={
+                    "guild_id": interaction.guild_id,
+                    "user_name": str(interaction.user),
+                    "user_avatar_url": str(interaction.user.avatar.url) if interaction.user.avatar else ""
+                }
             ) as response:
                 if response.status == 200:
                     data = await response.read()
                     file = discord.File(io.BytesIO(data), filename=f"{self.event_name}_export.xlsx")
-                    # For files, we need to use followup.send since edit_original_response doesn't support files
                     await interaction.followup.send("Here's the export:", file=file, ephemeral=True)
                 else:
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} Failed to export event data."
+                            description=f"Failed to export event data."
                         )
                     )
 
@@ -143,7 +145,9 @@ class SignupModal(Modal):
                     "player_tag": self.player_tag.value,
                     "discord_name": str(interaction.user),
                     "discord_user_id": str(interaction.user.id),
-                    "guild_id": interaction.guild_id
+                    "guild_id": interaction.guild_id,
+                    "user_name": str(interaction.user),
+                    "user_avatar_url": str(interaction.user.avatar.url) if interaction.user.avatar else ""
                 }
             ) as response:
                 if response.status == 201:
@@ -189,7 +193,7 @@ class SignupModal(Modal):
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} Error: {error.get('error', 'Unknown error')}"
+                            description=f"Error: {error.get('error', 'Unknown error')}"
                         )
                     )
 
@@ -237,7 +241,9 @@ class RemoveModal(Modal):
                     "player_tag": player_tag,
                     "discord_name": str(interaction.user),
                     "guild_id": interaction.guild_id,
-                    "user_roles": user_roles
+                    "user_roles": user_roles,
+                    "user_name": str(interaction.user),
+                    "user_avatar_url": str(interaction.user.avatar.url) if interaction.user.avatar else ""
                 }
             ) as response:
                 if response.status == 200:
@@ -281,7 +287,7 @@ class RemoveModal(Modal):
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} Event not found or player {player_tag} does not exist"
+                            description=f"Event not found or player {player_tag} does not exist"
                         )
                     )
                 else:
@@ -290,14 +296,14 @@ class RemoveModal(Modal):
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Error: {error.get('error', 'Unknown error')}"
+                                description=f"Error: {error.get('error', 'Unknown error')}"
                             )
                         )
                     except:
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Failed to remove signup (Status: {response.status})"
+                                description=f"Failed to remove signup (Status: {response.status})"
                             )
                         )
 
@@ -351,14 +357,14 @@ class CheckModal(Modal):
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} {player_tag} is not signed up for this event"
+                                description=f"{player_tag} is not signed up for this event"
                             )
                         )
                 elif response.status == 404:
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} Event not found or player {player_tag} does not exist"
+                            description=f"Event not found or player {player_tag} does not exist"
                         )
                     )
                 else:
@@ -367,14 +373,14 @@ class CheckModal(Modal):
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Error: {error.get('error', 'Unknown error')}"
+                                description=f"Error: {error.get('error', 'Unknown error')}"
                             )
                         )
                     except:
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Failed to check signup status (Status: {response.status})"
+                                description=f"Failed to check signup status (Status: {response.status})"
                             )
                         )
 
@@ -406,7 +412,7 @@ class CloseModal(Modal):
             await interaction.edit_original_response(
                 content="",
                 embed=EmbedBuilder.error(
-                    description=f"{ERROR_EMOJI} Please enter either 'yes' or 'no'"
+                    description=f"Please enter either 'yes' or 'no'"
                 )
             )
             return
@@ -415,7 +421,7 @@ class CloseModal(Modal):
             await interaction.edit_original_response(
                 content="",
                 embed=EmbedBuilder.error(
-                    description=f"{ERROR_EMOJI} Event closing cancelled"
+                    description=f"Event closing cancelled"
                 )
             )
             return
@@ -426,7 +432,7 @@ class CloseModal(Modal):
             try:
                 member = await interaction.guild.fetch_member(interaction.user.id)
             except:
-                await interaction.edit_original_response(content=f"{ERROR_EMOJI} Could not fetch your member information")
+                await interaction.edit_original_response(content=f"Could not fetch your member information")
                 return
         
         # Extract role IDs
@@ -437,7 +443,9 @@ class CloseModal(Modal):
                 f"{Config.API_BASE_URL}/api/events/{self.event_name}/close",
                 json={
                     "guild_id": interaction.guild_id,
-                    "user_roles": user_roles
+                    "user_roles": user_roles,
+                    "user_name": str(interaction.user),
+                    "user_avatar_url": str(interaction.user.avatar.url) if interaction.user.avatar else ""
                 }
             ) as response:
                 if response.status == 200:
@@ -455,14 +463,14 @@ class CloseModal(Modal):
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} {error.get('error', 'You do not have permission to close this event')}"
+                            description=f"{error.get('error', 'You do not have permission to close this event')}"
                         )
                     )
                 elif response.status == 409:
                     await interaction.edit_original_response(
                         content="",
                         embed=EmbedBuilder.error(
-                            description=f"{ERROR_EMOJI} Event '{self.event_name}' is already closed"
+                            description=f"Event '{self.event_name}' is already closed"
                         )
                     )
                 else:
@@ -471,14 +479,14 @@ class CloseModal(Modal):
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Error: {error.get('error', 'Unknown error')}"
+                                description=f"Error: {error.get('error', 'Unknown error')}"
                             )
                         )
                     except:
                         await interaction.edit_original_response(
                             content="",
                             embed=EmbedBuilder.error(
-                                description=f"{ERROR_EMOJI} Failed to close event (Status: {response.status})"
+                                description=f"Failed to close event (Status: {response.status})"
                             )
                         )
 
@@ -530,9 +538,10 @@ async def update_event_embed(guild_id: int, event_name: str, bot):
     # Build embed
     embed_color = discord.Color.red() if is_closed else discord.Color.green()
     embed_title = f'🔒 {event_name}' if is_closed else event_name
-    embed = message.embeds[0] if message.embeds else discord.Embed(title=embed_title, color=embed_color)
+    embed = message.embeds[0] if message.embeds else discord.Embed(title=embed_title, color=embed_color, timestamp=datetime.utcnow())
     embed.title = embed_title
     embed.color = embed_color
+    embed.timestamp = datetime.utcnow()  # Always update timestamp
 
     # Format TH composition
     th_text = "\n".join([f"TH{th}: {count}" for th, count in sorted(th_composition.items(), reverse=True)]) or "No signups yet"
@@ -581,9 +590,10 @@ class Events(commands.Cog):
     @commands.hybrid_command(name="create_event", description="Create a new event")
     @app_commands.describe(
         name="Name of the event",
-        role="Optional role to assign to event participants (leave empty for no role)"
+        role="Optional role to assign to event participants (leave empty for no role)",
+        log_channel="Optional channel for logging event actions (leave empty for no logging)"
     )
-    async def create_event(self, ctx: commands.Context, name: str, role: discord.Role = None):
+    async def create_event(self, ctx: commands.Context, name: str, role: discord.Role = None, log_channel: discord.TextChannel = None):
         """Create a new event."""
         await ctx.defer()
         
@@ -591,12 +601,18 @@ class Events(commands.Cog):
         request_data = {
             "event_name": name,
             "guild_id": ctx.guild.id,
-            "channel_id": ctx.channel.id
+            "channel_id": ctx.channel.id,
+            "user_name": str(ctx.author),
+            "user_avatar_url": str(ctx.author.avatar.url) if ctx.author.avatar else ""
         }
         
         # Add role_id if a role was provided
         if role:
             request_data["role_id"] = str(role.id)
+            
+        # Add log_channel_id if a log channel was provided
+        if log_channel:
+            request_data["log_channel_id"] = str(log_channel.id)
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -608,7 +624,8 @@ class Events(commands.Cog):
                     embed = discord.Embed(
                         title=name,
                         description="Event roster and signups",
-                        color=discord.Color.green()
+                        color=discord.Color.green(),
+                        timestamp=datetime.utcnow()
                     )
                     embed.add_field(name="Total Signups", value="0", inline=False)
                     embed.add_field(name="TH Composition", value="No signups yet", inline=False)
@@ -643,6 +660,8 @@ class Events(commands.Cog):
                     success_msg = f"✅ Created event: {name}"
                     if role:
                         success_msg += f"\n📋 Event role: {role.mention}"
+                    if log_channel:
+                        success_msg += f"\n📝 Logging enabled: {log_channel.mention}"
                     
                     # Use followup if available (slash commands), otherwise use send
                     if hasattr(ctx, 'followup'):

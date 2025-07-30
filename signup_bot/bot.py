@@ -7,11 +7,14 @@ import asyncio
 from typing import List
 import os
 from datetime import datetime
+import firebase_admin
+from firebase_admin import firestore
 
 from . import __version__, Config
 from .api import Config as APIConfig
 import aiohttp
 from .cogs.events import EventView
+from .utils.logger import EventLogger
 
 # Configure logging
 logging.basicConfig(
@@ -23,6 +26,19 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Firebase
+import firebase_admin
+from firebase_admin import credentials
+
+try:
+    # Get Firebase credentials
+    firebase_creds = Config.get_firebase_credentials()
+    cred = credentials.Certificate(firebase_creds)
+    firebase_admin.initialize_app(cred)
+    logger.info("Firebase initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Firebase: {e}")
 
 async def get_all_events(bot):
     """Fetch all events for all guilds the bot is in."""
@@ -94,6 +110,66 @@ class SignupBot(commands.Bot):
             logger.info("Persistent event views registered successfully")
         except Exception as e:
             logger.error(f"Failed to register persistent views: {e}")
+        
+        # Start background task to process log entries
+        self.loop.create_task(self.process_log_entries())
+    
+    async def process_log_entries(self):
+        """Background task to process log entries and send them to Discord."""
+        db = firestore.client()
+        
+        while True:
+            try:
+                # Get all guilds the bot is in
+                for guild in self.guilds:
+                    # Get all events for this guild
+                    events_ref = db.collection('servers').document(str(guild.id)).collection('events')
+                    events = events_ref.stream()
+                    
+                    for event_doc in events:
+                        event_name = event_doc.id
+                        event_data = event_doc.to_dict()
+                        log_channel_id = event_data.get('log_channel_id')
+                        
+                        if not log_channel_id:
+                            continue
+                        
+                        # Get unprocessed log entries
+                        logs_ref = event_doc.reference.collection('logs')
+                        unprocessed_logs = logs_ref.where('processed', '==', False).stream()
+                        
+                        for log_doc in unprocessed_logs:
+                            log_data = log_doc.to_dict()
+                            
+                            try:
+                                # Send the log entry to Discord
+                                await EventLogger.log_action(
+                                    bot=self,
+                                    guild_id=int(log_data['guild_id']),
+                                    event_name=log_data['event_name'],
+                                    action=log_data['action'],
+                                    user_name=log_data['user_name'],
+                                    user_avatar_url=log_data['user_avatar_url'],
+                                    success=log_data['success'],
+                                    details=log_data.get('details', ''),
+                                    error_reason=log_data.get('error_reason', ''),
+                                    additional_data=log_data.get('additional_data', {})
+                                )
+                                
+                                # Mark as processed
+                                log_doc.reference.update({'processed': True})
+                                
+                            except Exception as e:
+                                logger.error(f"Error processing log entry: {e}")
+                                # Mark as processed to avoid infinite retries
+                                log_doc.reference.update({'processed': True})
+                
+                # Wait before next check
+                await asyncio.sleep(5)  # Check every 5 seconds
+                
+            except Exception as e:
+                logger.error(f"Error in process_log_entries: {e}")
+                await asyncio.sleep(10)  # Wait longer on error
     
     async def on_command_error(self, context: commands.Context, exception: Exception) -> None:
         """Handle command errors."""

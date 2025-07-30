@@ -49,7 +49,8 @@ class Utilities(commands.Cog):
             title="Signup Bot",
             description=f"Version: {__version__}\n"
                       f"Discord.py: {discord.__version__}",
-            color=discord.Color.blue()
+            color=discord.Color.blue(),
+            timestamp=datetime.utcnow()
         )
         await ctx.send(embed=embed)
     
@@ -84,7 +85,8 @@ class Utilities(commands.Cog):
         embed = discord.Embed(
             title="Signup Bot Help",
             description="A bot for managing Clash of Clans event signups.",
-            color=discord.Color.blue()
+            color=discord.Color.blue(),
+            timestamp=datetime.utcnow()
         )
         
         # Admin Commands

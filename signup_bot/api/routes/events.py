@@ -1,7 +1,6 @@
 # Event-related API routes.
 from flask import Blueprint, request, jsonify, send_file
 import io
-import firebase_admin
 from firebase_admin import firestore
 import requests
 from datetime import datetime
@@ -15,6 +14,45 @@ from ... import Config
 # Create blueprint
 events_bp = Blueprint('events', __name__)
 db = firestore.client()
+
+def log_event_action(guild_id: str, event_name: str, action: str, user_name: str, 
+                    user_avatar_url: str, success: bool, details: str = "", 
+                    error_reason: str = "", additional_data: dict = None):
+    """Log an event action to the designated log channel."""
+    try:
+        # Get the log channel ID from the event data
+        event_ref = db.collection('servers').document(str(guild_id)).collection('events').document(event_name)
+        event_doc = event_ref.get()
+        
+        if not event_doc.exists:
+            return
+            
+        event_data = event_doc.to_dict()
+        log_channel_id = event_data.get('log_channel_id')
+        
+        if not log_channel_id:
+            return
+            
+        # Store log entry in Firebase for the bot to process
+        log_entry = {
+            'guild_id': guild_id,
+            'event_name': event_name,
+            'action': action,
+            'user_name': user_name,
+            'user_avatar_url': user_avatar_url,
+            'success': success,
+            'details': details,
+            'error_reason': error_reason,
+            'additional_data': additional_data or {},
+            'timestamp': datetime.utcnow().isoformat(),
+            'processed': False
+        }
+        
+        # Store in a logs collection
+        db.collection('servers').document(str(guild_id)).collection('events').document(event_name).collection('logs').add(log_entry)
+        
+    except Exception as e:
+        print(f"Error logging action: {e}")
 
 def is_user_leader(guild_id: str, user_roles: list) -> bool:
     """Check if user has any leader role."""
@@ -36,10 +74,16 @@ def is_user_leader(guild_id: str, user_roles: list) -> bool:
         return False
 
 def player_get(player_tag: str) -> dict:
-    """Retrieve player data from the Clash of Clans API."""
-    url = f'https://cocproxy.royaleapi.dev/v1/players/%23{player_tag.lstrip("#")}'
-    response = requests.get(url, headers={'Authorization': Config.AUTH})
-    return response.json()
+    try:
+        url = f'https://cocproxy.royaleapi.dev/v1/players/%23{player_tag.lstrip("#")}'
+        response = requests.get(url, headers={'Authorization': Config.AUTH})
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {} 
+    except Exception as e:
+        print(f"Error fetching player data: {e}")
+        return {}
 
 @events_bp.route('', methods=['POST'])
 def create_event():
@@ -50,6 +94,7 @@ def create_event():
         guild_id = data.get('guild_id')
         channel_id = data.get('channel_id')
         role_id = data.get('role_id')  # Optional role ID
+        log_channel_id = data.get('log_channel_id')  # Optional log channel ID
         
         if not event_name or not guild_id:
             return jsonify({'error': 'Event name and guild ID are required'}), 400
@@ -72,7 +117,7 @@ def create_event():
                     {'name': 'Total Signups', 'value': '0', 'inline': False},
                     {'name': 'TH Composition', 'value': 'No signups yet', 'inline': False}
                 ],
-                'color': 0x00ff00  # Green color
+                'color': 0x00ff00
             },
             'channel_id': channel_id
         }
@@ -80,11 +125,46 @@ def create_event():
         # Add role_id if provided
         if role_id:
             event_data['role_id'] = role_id
+            
+        # Add log_channel_id if provided
+        if log_channel_id:
+            event_data['log_channel_id'] = log_channel_id
         
         event_ref.set(event_data)
+        
+        # Log the event creation
+        user_name = data.get('user_name', 'Unknown User')
+        user_avatar_url = data.get('user_avatar_url', '')
+        log_event_action(
+            guild_id=str(guild_id),
+            event_name=event_name,
+            action='create',
+            user_name=user_name,
+            user_avatar_url=user_avatar_url,
+            success=True,
+            details=f"Event '{event_name}' created successfully",
+            additional_data={
+                'channel_id': channel_id,
+                'role_id': role_id,
+                'log_channel_id': log_channel_id
+            }
+        )
+        
         return jsonify({'message': 'Event created successfully', 'event_name': event_name}), 201
         
     except Exception as e:
+        # Log the error
+        user_name = request.json.get('user_name', 'Unknown User') if request.json else 'Unknown User'
+        user_avatar_url = request.json.get('user_avatar_url', '') if request.json else ''
+        log_event_action(
+            guild_id=str(request.json.get('guild_id', '')) if request.json else '',
+            event_name=request.json.get('event_name', '') if request.json else '',
+            action='create',
+            user_name=user_name,
+            user_avatar_url=user_avatar_url,
+            success=False,
+            error_reason=str(e)
+        )
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('', methods=['GET'])
@@ -165,9 +245,29 @@ def signup_player(event_name):
         event_doc = event_ref.get()
         
         if not event_doc.exists:
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='signup',
+                user_name=discord_name,
+                user_avatar_url=data.get('user_avatar_url', ''),
+                success=False,
+                error_reason='Event not found'
+            )
             return jsonify({'error': 'Event not found'}), 404
             
         if not event_doc.to_dict().get('is_open', True):
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='signup',
+                user_name=discord_name,
+                user_avatar_url=data.get('user_avatar_url', ''),
+                success=False,
+                error_reason='Event registration is closed'
+            )
             return jsonify({'error': 'Event registration is closed'}), 400
         
         # Check if player is already signed up
@@ -175,14 +275,37 @@ def signup_player(event_name):
         existing_signup = signups_ref.where('player_tag', '==', player_tag).limit(1).get()
         
         if len(existing_signup) > 0:
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='signup',
+                user_name=discord_name,
+                user_avatar_url=data.get('user_avatar_url', ''),
+                success=False,
+                error_reason='Player already signed up for this event'
+            )
             return jsonify({'error': 'You are already signed up for this event'}), 400
         
         # Get player data from Clash of Clans API
         try:
             player_data = player_get(player_tag)
-            player_name = player_data.get('name', 'Unknown')
-            player_th = player_data.get('townHallLevel', 0)
+            if player_data:
+                player_name = player_data.get('name', 'Unknown')
+                player_th = player_data.get('townHallLevel', 0)
+            else:
+                raise Exception('Please check the player tag.')
         except Exception as e:
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='signup',
+                user_name=discord_name,
+                user_avatar_url=data.get('user_avatar_url', ''),
+                success=False,
+                error_reason=f'Failed to fetch player data: {str(e)}'
+            )
             return jsonify({'error': 'Failed to fetch player data. Please check the player tag.'}), 400
         
         # Add signup
@@ -206,6 +329,23 @@ def signup_player(event_name):
         # Get event data to check for role_id
         event_data = event_doc.to_dict()
         role_id = event_data.get('role_id')
+        
+        # Log successful signup
+        log_event_action(
+            guild_id=str(guild_id),
+            event_name=event_name,
+            action='signup',
+            user_name=discord_name,
+            user_avatar_url=data.get('user_avatar_url', ''),
+            success=True,
+            details=f"Player {player_name} (TH{player_th}) signed up successfully",
+            additional_data={
+                'player_name': player_name,
+                'player_tag': player_tag,
+                'player_th': player_th,
+                'signup_index': signup_count + 1
+            }
+        )
         
         return jsonify({
             'message': 'Signup successful',
@@ -300,6 +440,21 @@ def export_event(event_name):
         wb.save(file_stream)
         file_stream.seek(0)
         
+        # Log successful export
+        log_event_action(
+            guild_id=str(guild_id),
+            event_name=event_name,
+            action='export',
+            user_name=request.args.get('user_name', 'Unknown User'),
+            user_avatar_url=request.args.get('user_avatar_url', ''),
+            success=True,
+            details=f"Event '{event_name}' data exported successfully",
+            additional_data={
+                'signup_count': len(signups),
+                'file_name': f"{event_name}_export.xlsx"
+            }
+        )
+        
         return send_file(
             file_stream,
             as_attachment=True,
@@ -323,9 +478,31 @@ async def close_event(event_name):
             return jsonify({'error': 'Event not found'}), 404
 
         if not is_user_leader(guild_id, request.json.get('user_roles', [])):
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='close',
+                user_name=request.json.get('user_name', 'Unknown User'),
+                user_avatar_url=request.json.get('user_avatar_url', ''),
+                success=False,
+                error_reason='User does not have leader permissions'
+            )
             return jsonify({'error': 'You must be a leader to close an event'}), 403
             
         event_ref.update({'is_open': False})
+        
+        # Log successful closure
+        log_event_action(
+            guild_id=str(guild_id),
+            event_name=event_name,
+            action='close',
+            user_name=request.json.get('user_name', 'Unknown User'),
+            user_avatar_url=request.json.get('user_avatar_url', ''),
+            success=True,
+            details=f"Event '{event_name}' registration closed successfully"
+        )
+        
         return jsonify({'message': 'Event registration closed successfully'}), 200
         
     except Exception as e:
@@ -448,6 +625,23 @@ async def remove_player(event_name):
         
         # Commit all updates
         batch.commit()
+        
+        # Log successful removal
+        log_event_action(
+            guild_id=str(guild_id),
+            event_name=event_name,
+            action='remove',
+            user_name=discord_name,
+            user_avatar_url=data.get('user_avatar_url', ''),
+            success=True,
+            details=f"Player {player_data['name']} (TH{player_data['th_level']}) removed from event",
+            additional_data={
+                'player_name': player_data['name'],
+                'player_th': player_data['th_level'],
+                'removed_index': removed_index,
+                'is_self_removal': signup_data.get('discord_name') == discord_name
+            }
+        )
         
         return jsonify({
             'message': 'Player removed successfully',

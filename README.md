@@ -24,6 +24,7 @@ A Discord bot designed to manage event signups for Clash of Clans communities. T
 - Registration closure
 - Real-time signup tracking
 - Data export functionality
+- **Event logging system** - Track all event actions in designated channels
 
 ## 🏗️ Project Structure
 
@@ -138,6 +139,39 @@ python run_api.py
 - `/uptime` - Check bot uptime
 - `/version` - Show bot version
 - `/invite` - Get bot invite link
+
+### Event Commands (Updated)
+- `/create_event [name] [role] [log_channel]` - Create a new event with optional role and logging
+- `/list_events` - List all events
+- `/sign_up [event]` - Sign up for an event
+- `/check [event]` - Check your signup status
+- `/remove [event]` - Remove your signup
+- `/export [event]` - Export event data
+
+## 📝 Event Logging
+
+The bot now includes a comprehensive logging system that tracks all event-related actions and sends detailed logs to a designated Discord channel.
+
+### Features
+- **Automatic Logging**: All event actions (create, signup, remove, export, close) are automatically logged
+- **User Information**: Each log includes the user's name and avatar who performed the action
+- **Success/Failure Tracking**: Logs show whether actions succeeded or failed with detailed error messages
+- **Rich Embeds**: Logs are sent as formatted Discord embeds with relevant information
+
+### Setup
+When creating an event, you can specify an optional log channel:
+```
+/create_event name:War Event role:@Warrior log_channel:#event-logs
+```
+
+### Log Format
+Each log entry includes:
+- User performing the action (name + avatar)
+- Action type and success/failure status
+- Event context and relevant details
+- Error information if the action failed
+
+For detailed documentation, see [LOGGING_FEATURE.md](LOGGING_FEATURE.md).
 
 ## 🔧 Development
 
