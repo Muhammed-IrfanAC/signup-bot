@@ -70,7 +70,7 @@ class SignupBot(commands.Bot):
         super().__init__(
             command_prefix=commands.when_mentioned_or('!'),
             intents=intents,
-            activity=discord.Game(name=f"Signup Bot v{__version__}"),
+            activity=discord.Game(name="Starting up..."),
         )
         
         # Store TH counts for each event
@@ -113,6 +113,22 @@ class SignupBot(commands.Bot):
         
         # Start background task to process log entries
         self.loop.create_task(self.process_log_entries())
+        
+        await self.update_activity()
+    
+    async def update_activity(self):
+        """Update the bot's activity with dynamic name."""
+        try:
+            bot_name = self.user.name if self.user else "Signup Bot"
+            
+            activity = discord.Game(name=f"{bot_name} v{__version__}")
+            await self.change_presence(activity=activity)
+            
+            logger.info(f"Updated activity to: Playing {bot_name} v{__version__}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update activity: {e}")
+            await self.change_presence(activity=discord.Game(name=f"Signup Bot v{__version__}"))
     
     async def process_log_entries(self):
         """Background task to process log entries and send them to Discord."""
