@@ -587,7 +587,7 @@ class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.hybrid_command(name="create_event", description="Create a new event")
+    @commands.hybrid_command(name="create_event", description="Create a new event (Leader only)")
     @app_commands.describe(
         name="Name of the event",
         role="Optional role to assign to event participants (leave empty for no role)",
@@ -597,13 +597,25 @@ class Events(commands.Cog):
         """Create a new event."""
         await ctx.defer()
         
+        member = ctx.guild.get_member(ctx.author.id)
+        if not member:
+            try:
+                member = await ctx.guild.fetch_member(ctx.author.id)
+            except:
+                await ctx.followup.send(f"Could not fetch your member information", ephemeral=True) if hasattr(ctx, 'followup') else await ctx.send(f"Could not fetch your member information")
+                return
+        
+        # Extract role IDs
+        user_roles = [str(role.id) for role in member.roles if role.id != ctx.guild.id]
+        
         # Prepare the request data
         request_data = {
             "event_name": name,
             "guild_id": ctx.guild.id,
             "channel_id": ctx.channel.id,
             "user_name": str(ctx.author),
-            "user_avatar_url": str(ctx.author.avatar.url) if ctx.author.avatar else ""
+            "user_avatar_url": str(ctx.author.avatar.url) if ctx.author.avatar else "",
+            "user_roles": user_roles
         }
         
         # Add role_id if a role was provided

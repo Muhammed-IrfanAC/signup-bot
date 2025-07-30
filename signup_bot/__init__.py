@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Bot version
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 # Base directory
 BASE_DIR = Path(__file__).parent

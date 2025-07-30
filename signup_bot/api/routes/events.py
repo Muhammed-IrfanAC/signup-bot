@@ -99,6 +99,21 @@ def create_event():
         if not event_name or not guild_id:
             return jsonify({'error': 'Event name and guild ID are required'}), 400
         
+        # Check if user is a leader
+        user_roles = data.get('user_roles', [])
+        if not is_user_leader(guild_id, user_roles):
+            # Log the error
+            log_event_action(
+                guild_id=str(guild_id),
+                event_name=event_name,
+                action='create',
+                user_name=data.get('user_name', 'Unknown User'),
+                user_avatar_url=data.get('user_avatar_url', ''),
+                success=False,
+                error_reason='User does not have leader permissions'
+            )
+            return jsonify({'error': 'You must be a leader to create events'}), 403
+        
         # Check if event already exists
         event_ref = db.collection('servers').document(str(guild_id)).collection('events').document(event_name)
         if event_ref.get().exists:
