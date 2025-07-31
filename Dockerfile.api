@@ -34,4 +34,4 @@ EXPOSE 8000
 
 # Launch the Flask API using Gunicorn with the app factory pattern.
 # This ignores the run_api.py file, leaving it unchanged for local development.
-CMD ["gunicorn", "signup_bot.api:create_app()", "--factory", "--bind", "0.0.0.0:8000", "--workers", "2"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "signup_bot.api:create_app()"] 
